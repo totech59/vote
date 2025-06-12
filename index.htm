@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>투표 시스템</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗳️</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body, html {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* 로딩 화면 */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        
+        .loading-subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        /* iframe 스타일 */
+        #mainFrame {
+            width: 100%;
+            height: 100vh;
+            border: none;
+            background: white;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* 에러 화면 */
+        .error-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .error-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .error-title {
+            font-size: 24px;
+            color: #dc3545;
+            margin-bottom: 10px;
+        }
+        
+        .error-message {
+            font-size: 16px;
+            color: #6c757d;
+            margin-bottom: 20px;
+            max-width: 400px;
+            line-height: 1.5;
+        }
+        
+        .retry-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .retry-btn:hover {
+            background: #0056b3;
+        }
+        
+        /* 모바일 최적화 */
+        @media (max-width: 768px) {
+            .loading-text {
+                font-size: 16px;
+            }
+            
+            .loading-subtitle {
+                font-size: 12px;
+            }
+            
+            .error-title {
+                font-size: 20px;
+            }
+            
+            .error-message {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 로딩 화면 -->
+    <div id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">투표 시스템 로딩 중...</div>
+        <div class="loading-subtitle">잠시만 기다려주세요</div>
+    </div>
+    
+    <!-- 메인 iframe -->
+    <iframe id="mainFrame" class="hidden"></iframe>
+    
+    <!-- 에러 화면 -->
+    <div id="errorScreen" class="error-screen hidden">
+        <div class="error-icon">⚠️</div>
+        <div class="error-title">연결 실패</div>
+        <div class="error-message">
+            투표 시스템에 연결할 수 없습니다.<br>
+            네트워크 연결을 확인하고 다시 시도해주세요.
+        </div>
+        <button class="retry-btn" onclick="retryConnection()">다시 시도</button>
+    </div>
+
+    <script>
+        // Base64로 인코딩된 원본 URL (보안강화)
+        const encodedUrl = 'aHR0cDovL3RvdGVjaC5pcHRpbWUub3JnOjY1MDA0L2NvbnRlbnRzL3ZvdGUv';
+        
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        function loadVotingSystem() {
+            const iframe = document.getElementById('mainFrame');
+            const loading = document.getElementById('loading');
+            const errorScreen = document.getElementById('errorScreen');
+            
+            try {
+                // Base64 디코딩하여 원본 URL 복원
+                const originalUrl = atob(encodedUrl);
+                iframe.src = originalUrl;
+                
+                // iframe 로드 완료 처리
+                iframe.onload = function() {
+                    setTimeout(() => {
+                        loading.classList.add('hidden');
+                        errorScreen.classList.add('hidden');
+                        iframe.classList.remove('hidden');
+                    }, 1500); // 로딩 화면을 1.5초간 표시
+                };
+                
+                // iframe 로드 에러 처리
+                iframe.onerror = function() {
+                    showError();
+                };
+                
+                // 타임아웃 처리 (10초)
+                setTimeout(() => {
+                    if (!iframe.classList.contains('hidden')) {
+                        return; // 이미 로드됨
+                    }
+                    showError();
+                }, 10000);
+                
+            } catch (error) {
+                console.error('URL 디코딩 오류:', error);
+                showError();
+            }
+        }
+        
+        function showError() {
+            const loading = document.getElementById('loading');
+            const errorScreen = document.getElementById('errorScreen');
+            
+            loading.classList.add('hidden');
+            errorScreen.classList.remove('hidden');
+        }
+        
+        function retryConnection() {
+            if (retryCount >= maxRetries) {
+                alert('최대 재시도 횟수를 초과했습니다. 페이지를 새로고침해주세요.');
+                return;
+            }
+            
+            retryCount++;
+            const loading = document.getElementById('loading');
+            const errorScreen = document.getElementById('errorScreen');
+            const iframe = document.getElementById('mainFrame');
+            
+            // 화면 초기화
+            errorScreen.classList.add('hidden');
+            iframe.classList.add('hidden');
+            loading.classList.remove('hidden');
+            
+            // 1초 후 재시도
+            setTimeout(loadVotingSystem, 1000);
+        }
+        
+        // 페이지 로드 시 실행
+        window.addEventListener('load', function() {
+            // 0.5초 후 로딩 시작 (사용자 경험 개선)
+            setTimeout(loadVotingSystem, 500);
+        });
+        
+        // 뒤로가기 방지 (선택사항)
+        window.addEventListener('popstate', function(e) {
+            if (confirm('투표 페이지를 나가시겠습니까?')) {
+                history.back();
+            } else {
+                history.pushState(null, null, location.href);
+            }
+        });
+        
+        // 보안: 개발자 도구 열기 감지 (선택사항)
+        let devtools = {open: false};
+        setInterval(function() {
+            if (window.outerHeight - window.innerHeight > 200 || 
+                window.outerWidth - window.innerWidth > 200) {
+                if (!devtools.open) {
+                    devtools.open = true;
+                    console.clear();
+                    console.log('%c⚠️ 보안 경고', 'color: red; font-size: 20px; font-weight: bold;');
+                    console.log('%c이 기능은 개발자를 위한 것입니다. 악의적인 코드 실행에 주의하세요.', 'color: red; font-size: 14px;');
+                }
+            } else {
+                devtools.open = false;
+            }
+        }, 500);
+    </script>
+</body>
+</html>
